@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Open Factor Designer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="controls">
+      <h1>Pattern Microfori</h1>
+
+      <div class="control-row" data-control="mode">
+        <label for="modeSelect">Modalità di calcolo</label>
+        <select id="modeSelect" aria-describedby="modeHelp">
+          <option value="of">Calcola OF da d, x, y</option>
+          <option value="step">Calcola passo (x = y) da d e OF</option>
+          <option value="diameter">Calcola d da OF, x, y</option>
+        </select>
+        <p class="control-help" id="modeHelp">Calcola OF in funzione di diametro e passi.</p>
+      </div>
+
+      <div class="control-row" data-control="ofTarget">
+        <label for="ofRange">
+          OF (%)
+          <span class="of-inline-value" id="ofInlineValue">0.00%</span>
+        </label>
+        <div class="slider-group slider-only">
+          <input type="range" id="ofRange" data-range="ofTarget" min="0" max="12" step="0.02" value="8" aria-label="Open factor" />
+        </div>
+      </div>
+
+      <div class="control-row" data-control="d">
+        <label for="dRange">Diametro foro (d)</label>
+        <div class="slider-group">
+          <input type="range" id="dRange" data-range="d" min="0.2" max="0.9" step="0.05" value="0.5" aria-label="Diametro foro" />
+          <input type="number" id="dInput" data-number="d" min="0.2" max="0.9" step="0.05" value="0.50" />
+        </div>
+      </div>
+
+      <div class="control-row" data-control="x">
+        <label for="xRange">Passo orizzontale (x)</label>
+        <div class="slider-group">
+          <input type="range" id="xRange" data-range="x" min="1" max="10" step="0.1" value="5" aria-label="Passo orizzontale" />
+          <input type="number" id="xInput" data-number="x" min="1" max="10" step="0.1" value="5.00" />
+        </div>
+      </div>
+
+      <div class="control-row" data-control="y">
+        <label for="yRange">Passo verticale (y)</label>
+        <div class="slider-group">
+          <input type="range" id="yRange" data-range="y" min="1" max="10" step="0.1" value="5" aria-label="Passo verticale" />
+          <input type="number" id="yInput" data-number="y" min="1" max="10" step="0.1" value="5.00" />
+        </div>
+      </div>
+
+      <div class="toggle-row">
+        <div class="left">
+          <label>
+            <input type="checkbox" id="gridToggle" /> Mostra griglia
+          </label>
+        </div>
+        <div class="right">
+          <label for="patternSelect">Pattern
+            <select id="patternSelect">
+              <option value="staggered">Sfalsato</option>
+              <option value="grid">Griglia</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button type="button" class="secondary" id="resetBtn">Reset</button>
+        <button type="button" class="primary" id="exportSvgBtn">Esporta SVG</button>
+        <button type="button" class="primary" id="exportPngBtn">Esporta PNG</button>
+        <button type="button" class="accent" id="copyHashBtn">Copia parametri</button>
+      </div>
+
+      <div class="status-message" id="statusMessage" role="status" aria-live="polite" aria-atomic="true"></div>
+
+      <div class="info-box" id="infoBox">
+        <div class="info-grid">
+          <div class="info-item">
+            <strong>Area foro</strong>
+            <span id="holeArea">0 mm²</span>
+          </div>
+          <div class="info-item">
+            <strong>Area cella</strong>
+            <span id="cellArea">0 mm²</span>
+          </div>
+          <div class="info-item">
+            <strong>Rapporto d/x</strong>
+            <span id="ratioDX">0.00</span>
+          </div>
+          <div class="info-item">
+            <strong>Rapporto d/y</strong>
+            <span id="ratioDY">0.00</span>
+          </div>
+        </div>
+        <div class="badge-row">
+          <div class="badge" id="cellsCount">0 fori</div>
+        </div>
+        <div class="warning" id="warningMessage" role="alert" aria-live="assertive" aria-atomic="true">Diametro troppo grande rispetto al passo.</div>
+      </div>
+    </aside>
+
+    <main class="preview-panel">
+      <div class="preview-meta" aria-live="polite" aria-atomic="true">
+        <span id="previewSizeLabel">Copertura stimata: 0 × 0 mm</span>
+      </div>
+      <div class="svg-wrapper" id="svgWrapper" aria-label="Anteprima pattern">
+        <svg id="patternSvg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anteprima pattern">
+          <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#94a3b8" font-size="16">
+            Caricamento…
+          </text>
+        </svg>
+      </div>
+    </main>
+  </div>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
