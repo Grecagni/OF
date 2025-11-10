@@ -32,7 +32,8 @@
     baseHeightPx: 0,
     stepAuto: true,
     renderHandle: null,
-    gridLocked: false
+    gridLocked: false,
+    waveEnabled: true
   };
 
   const editingFields = new Set();
@@ -54,6 +55,9 @@
     dom.exportSvgBtn.addEventListener('click', exportSVG);
     dom.exportPngBtn.addEventListener('click', exportPNG);
     dom.copyHashBtn.addEventListener('click', copyParamsHash);
+    if (dom.waveToggleBtn) {
+      dom.waveToggleBtn.addEventListener('click', toggleWaveEffect);
+    }
 
     const hashState = parseHash();
     if (hashState) {
@@ -66,6 +70,7 @@
 
     applyParamsToUI(state.params);
     updateFromUI();
+    applyWaveToggleState();
   }
 
   function cacheDom() {
@@ -79,6 +84,7 @@
     dom.exportSvgBtn = document.getElementById('exportSvgBtn');
     dom.exportPngBtn = document.getElementById('exportPngBtn');
     dom.copyHashBtn = document.getElementById('copyHashBtn');
+    dom.waveToggleBtn = document.getElementById('waveToggleBtn');
     dom.previewSizeLabel = document.getElementById('previewSizeLabel');
     dom.info = {
       holeArea: document.getElementById('holeArea'),
@@ -144,6 +150,26 @@
     dom.patternSelect.value = params.pattern;
     if (dom.modeSelect) {
       dom.modeSelect.value = params.mode || CALC_MODES.OF;
+    }
+  }
+
+  function toggleWaveEffect() {
+    state.waveEnabled = !state.waveEnabled;
+    applyWaveToggleState();
+  }
+
+  function applyWaveToggleState() {
+    if (dom.svgWrapper) {
+      dom.svgWrapper.classList.toggle('wave-on', state.waveEnabled);
+    }
+    if (dom.waveToggleBtn) {
+      dom.waveToggleBtn.setAttribute('aria-pressed', String(state.waveEnabled));
+      dom.waveToggleBtn.classList.toggle('is-active', state.waveEnabled);
+      dom.waveToggleBtn.setAttribute('title', state.waveEnabled ? 'Effetto wave attivo' : 'Effetto wave disattivato');
+      const label = dom.waveToggleBtn.querySelector('.wave-toggle__label');
+      if (label) {
+        label.textContent = state.waveEnabled ? 'Wave attivo' : 'Wave spento';
+      }
     }
   }
 
@@ -497,9 +523,11 @@
     state.params = { ...defaults };
     state.stepAuto = true;
     state.gridLocked = false;
+    state.waveEnabled = true;
     enforceAutoGrid(state.params, { force: true });
     applyParamsToUI(state.params);
     updateFromUI();
+    applyWaveToggleState();
     setStatus('Parametri ripristinati.');
   }
 
