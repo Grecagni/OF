@@ -26,6 +26,8 @@
     .grid-line { stroke: #c5ccd8; stroke-width: 0.8; stroke-dasharray: 4 4; }
   `.trim();
   const PREVIEW_CLIP_ID = 'previewWaveClip';
+  const PREVIEW_WAVE_FILL_GRADIENT_ID = 'previewWaveFillGradient';
+  const PREVIEW_WAVE_GLOSS_GRADIENT_ID = 'previewWaveGlossGradient';
 
   const state = {
     params: { ...defaults },
@@ -392,8 +394,9 @@
       height: previewHeightPx,
       holeRadiusPx
     });
+    const fillFragments = buildPreviewWaveFillFragments(borderFrame);
+    fillFragments.forEach((fragment) => fragments.push(fragment));
     borderFrame.fragments.forEach((fragment) => fragments.push(fragment));
-    applyWrapperClipPath(state.waveEnabled ? borderFrame.waveClip : '');
 
     const contentFragments = [];
 
@@ -684,9 +687,35 @@
     return Math.min(Math.max(value, min), max);
   }
 
+  function buildPreviewWaveFillFragments(frameData) {
+    if (!state.waveEnabled || !frameData || !frameData.wavePath) {
+      return [];
+    }
+    const defs = `
+      <defs data-preview-only="true">
+        <linearGradient id="${PREVIEW_WAVE_FILL_GRADIENT_ID}" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#e9f0fb" />
+          <stop offset="40%" stop-color="#d7e3f6" />
+          <stop offset="100%" stop-color="#c2d0e9" />
+        </linearGradient>
+        <linearGradient id="${PREVIEW_WAVE_GLOSS_GRADIENT_ID}" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55" />
+          <stop offset="45%" stop-color="#ffffff" stop-opacity="0.18" />
+          <stop offset="70%" stop-color="#0f2654" stop-opacity="0.08" />
+          <stop offset="100%" stop-color="#0f2654" stop-opacity="0.18" />
+        </linearGradient>
+      </defs>
+    `.trim();
+    return [
+      defs,
+      `<path data-preview-only="true" class="preview-wave-fill" d="${frameData.wavePath}" fill="url(#${PREVIEW_WAVE_FILL_GRADIENT_ID})" />`,
+      `<path data-preview-only="true" class="preview-wave-fill overlay" d="${frameData.wavePath}" fill="url(#${PREVIEW_WAVE_GLOSS_GRADIENT_ID})" />`
+    ];
+  }
+
   function buildPreviewBorderFragments(options) {
     const { left, top, width, height, holeRadiusPx } = options || {};
-    const result = { fragments: [], wavePath: '', waveClip: '' };
+    const result = { fragments: [], wavePath: '' };
     const fallbackRect = `<rect x="${left}" y="${top}" width="${width}" height="${height}" class="preview-rect" />`;
     if (!state.waveEnabled) {
       result.fragments.push(fallbackRect);
@@ -712,7 +741,6 @@
     if (frameShape.path) {
       result.fragments.push(`<path data-preview-only="true" class="preview-wave-frame" d="${frameShape.path}" />`);
       result.wavePath = frameShape.path;
-      result.waveClip = frameShape.cssPath;
     }
     return result;
   }
@@ -725,11 +753,10 @@
   function buildWaveFrameShape(config) {
     const commands = buildWaveFrameCommands(config);
     if (!commands.length) {
-      return { path: '', cssPath: '' };
+      return { path: '' };
     }
     const svgPath = serializeWaveCommands(commands, (value) => formatSvgNum(value));
-    const cssPath = serializeWaveCommands(commands, (value, axis) => formatCssClipValue(value, axis, config));
-    return { path: svgPath, cssPath };
+    return { path: svgPath };
   }
 
   function buildWaveFrameCommands(config) {
@@ -829,30 +856,11 @@
     return parts.join(' ');
   }
 
-  function formatCssClipValue(value, axis, bounds) {
-    const { left = 0, top = 0, width, height } = bounds || {};
-    const denominator = axis === 'x' ? width : height;
-    const offset = axis === 'x' ? left : top;
-    const safeDenominator = Number.isFinite(denominator) && denominator !== 0 ? denominator : 1;
-    const raw = Number.isFinite(value) ? (value - offset) / safeDenominator : 0;
-    const clamped = clamp(raw, -0.1, 1.1);
-    return `${(clamped * 100).toFixed(4)}%`;
-  }
-
   function formatSvgNum(value) {
     if (!Number.isFinite(value)) {
       return '0';
     }
     return Number(value).toFixed(2);
-  }
-
-  function applyWrapperClipPath(pathData) {
-    if (!dom.svgWrapper) {
-      return;
-    }
-    const clipValue = pathData ? `path('${pathData}')` : '';
-    dom.svgWrapper.style.clipPath = clipValue;
-    dom.svgWrapper.style.webkitClipPath = clipValue;
   }
 
   function enforceAutoGrid(params, options = {}) {
