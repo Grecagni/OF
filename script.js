@@ -156,6 +156,7 @@
   function toggleWaveEffect() {
     state.waveEnabled = !state.waveEnabled;
     applyWaveToggleState();
+    requestRender();
   }
 
   function applyWaveToggleState() {
@@ -383,7 +384,14 @@
 
     const fragments = [];
     fragments.push(`<style>${SVG_EMBEDDED_STYLES}</style>`);
-    fragments.push(`<rect x="${marginPx}" y="${marginPx}" width="${previewWidthPx}" height="${previewHeightPx}" class="preview-rect" />`);
+    const borderFragments = buildPreviewBorderFragments({
+      left: marginPx,
+      top: marginPx,
+      width: previewWidthPx,
+      height: previewHeightPx,
+      holeRadiusPx
+    });
+    borderFragments.forEach((fragment) => fragments.push(fragment));
 
     if (params.showGrid) {
       for (let c = 0; c <= params.cols; c += 1) {
@@ -412,7 +420,6 @@
         holesDrawn += 1;
       }
     }
-
     dom.svg.innerHTML = fragments.join('');
     dom.svg.setAttribute('viewBox', `0 0 ${widthPx} ${heightPx}`);
     dom.svg.setAttribute('width', widthPx);
@@ -495,6 +502,13 @@
       return null;
     }
     const clone = dom.svg.cloneNode(true);
+    clone.querySelectorAll('[data-preview-only="true"]').forEach((node) => node.remove());
+    clone.querySelectorAll('[data-preview-hidden-border]').forEach((node) => {
+      node.removeAttribute('data-preview-hidden-border');
+      node.removeAttribute('stroke-opacity');
+      node.removeAttribute('opacity');
+      node.removeAttribute('stroke');
+    });
     clone.setAttribute('viewBox', `0 0 ${state.baseWidthPx} ${state.baseHeightPx}`);
     clone.setAttribute('width', state.baseWidthPx);
     clone.setAttribute('height', state.baseHeightPx);
@@ -638,6 +652,112 @@
 
   function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
+  }
+
+  function buildPreviewBorderFragments(options) {
+    const { left, top, width, height, holeRadiusPx } = options || {};
+    const fallbackRect = `<rect x="${left}" y="${top}" width="${width}" height="${height}" class="preview-rect" />`;
+    if (!state.waveEnabled) {
+      return [fallbackRect];
+    }
+    const fragments = [];
+    const hiddenRect = `<rect x="${left}" y="${top}" width="${width}" height="${height}" class="preview-rect" data-preview-hidden-border="true" stroke="none" stroke-opacity="0" opacity="0" />`;
+    fragments.push(hiddenRect);
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return fragments;
+    }
+    const amplitudeBase = Math.min(Math.max(holeRadiusPx || 0, 4), width * 0.08);
+    const waveAmplitudePx = clamp(amplitudeBase || 0, 6, Math.max(width * 0.12, 10));
+    const cyclesEstimate = Math.round(Math.max(height, 1) / 70);
+    const waveCycles = clamp(cyclesEstimate || 0, 3, 14);
+    const framePath = buildWaveFramePath({
+      left,
+      top,
+      width,
+      height,
+      amplitude: waveAmplitudePx,
+      waves: waveCycles
+    });
+    if (framePath) {
+      fragments.push(`<path data-preview-only="true" class="preview-wave-frame" d="${framePath}" />`);
+    }
+    return fragments;
+  }
+
+  function buildWaveFramePath(config) {
+    const { left, top, width, height, amplitude, waves } = config || {};
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return '';
+    }
+    if (!Number.isFinite(amplitude) || amplitude <= 0) {
+      return '';
+    }
+    const safeWaves = Math.max(1, Math.round(waves));
+    const segments = safeWaves * 2;
+    const right = left + width;
+    const bottom = top + height;
+    const rightWave = buildWaveSegmentSequence({
+      startX: right,
+      startY: top,
+      height,
+      amplitude,
+      segments,
+      direction: -1,
+      orientation: 'down'
+    });
+    const leftWave = buildWaveSegmentSequence({
+      startX: left,
+      startY: bottom,
+      height,
+      amplitude,
+      segments,
+      direction: 1,
+      orientation: 'up'
+    });
+    if (!rightWave.path || !leftWave.path) {
+      return '';
+    }
+    const parts = [
+      `M ${formatSvgNum(left)} ${formatSvgNum(top)}`,
+      `L ${formatSvgNum(right)} ${formatSvgNum(top)}`,
+      rightWave.path,
+      `L ${formatSvgNum(left)} ${formatSvgNum(bottom)}`,
+      leftWave.path,
+      'Z'
+    ];
+    return parts.join(' ');
+  }
+
+  function buildWaveSegmentSequence(options) {
+    const { startX, startY, height, amplitude, segments, direction = 1, orientation = 'down' } = options || {};
+    if (!Number.isFinite(height) || height <= 0) {
+      return { path: '', endY: startY };
+    }
+    if (!Number.isFinite(amplitude) || amplitude <= 0) {
+      return { path: '', endY: startY };
+    }
+    if (!Number.isFinite(segments) || segments <= 0) {
+      return { path: '', endY: startY };
+    }
+    const sign = orientation === 'up' ? -1 : 1;
+    const segmentHeight = (height / segments) * sign;
+    let currentY = startY;
+    const parts = [];
+    for (let i = 0; i < segments; i += 1) {
+      const swing = amplitude * (i % 2 === 0 ? 1 : -1) * direction;
+      const ctrlX = startX + swing;
+      const ctrlY = currentY + segmentHeight / 2;
+      currentY += segmentHeight;
+      parts.push(`Q ${formatSvgNum(ctrlX)} ${formatSvgNum(ctrlY)} ${formatSvgNum(startX)} ${formatSvgNum(currentY)}`);
+    }
+    return { path: parts.join(' '), endY: currentY };
+  }
+
+  function formatSvgNum(value) {
+    if (!Number.isFinite(value)) {
+      return '0';
+    }
+    return Number(value).toFixed(2);
   }
 
   function enforceAutoGrid(params, options = {}) {
