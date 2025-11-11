@@ -25,6 +25,7 @@
     .hole { fill: #ffffff; stroke: #4b5563; stroke-width: 1; }
     .grid-line { stroke: #c5ccd8; stroke-width: 0.8; stroke-dasharray: 4 4; }
   `.trim();
+  const PREVIEW_CLIP_ID = 'previewWaveClip';
 
   const state = {
     params: { ...defaults },
@@ -384,23 +385,26 @@
 
     const fragments = [];
     fragments.push(`<style>${SVG_EMBEDDED_STYLES}</style>`);
-    const borderFragments = buildPreviewBorderFragments({
+    const borderFrame = buildPreviewBorderFragments({
       left: marginPx,
       top: marginPx,
       width: previewWidthPx,
       height: previewHeightPx,
       holeRadiusPx
     });
-    borderFragments.forEach((fragment) => fragments.push(fragment));
+    borderFrame.fragments.forEach((fragment) => fragments.push(fragment));
+    applyWrapperClipPath(state.waveEnabled ? borderFrame.waveClip : '');
+
+    const contentFragments = [];
 
     if (params.showGrid) {
       for (let c = 0; c <= params.cols; c += 1) {
         const x = startCx + c * cellWidthPx;
-        fragments.push(`<line x1="${x}" y1="${contentTopPx}" x2="${x}" y2="${contentTopPx + boundedHeightPx}" class="grid-line" />`);
+        contentFragments.push(`<line x1="${x}" y1="${contentTopPx}" x2="${x}" y2="${contentTopPx + boundedHeightPx}" class="grid-line" />`);
       }
       for (let r = 0; r <= params.rows; r += 1) {
         const y = startCy + r * cellHeightPx;
-        fragments.push(`<line x1="${contentLeftPx}" y1="${y}" x2="${contentLeftPx + boundedWidthPx}" y2="${y}" class="grid-line" />`);
+        contentFragments.push(`<line x1="${contentLeftPx}" y1="${y}" x2="${contentLeftPx + boundedWidthPx}" y2="${y}" class="grid-line" />`);
       }
     }
 
@@ -416,10 +420,23 @@
         if (cy - holeRadiusPx < contentTopPx || cy + holeRadiusPx > contentBottomPx) {
           continue;
         }
-        fragments.push(`<circle cx="${cx}" cy="${cy}" r="${holeRadiusPx}" class="hole" />`);
+        contentFragments.push(`<circle cx="${cx}" cy="${cy}" r="${holeRadiusPx}" class="hole" />`);
         holesDrawn += 1;
       }
     }
+
+    const shouldClipContent = state.waveEnabled && Boolean(borderFrame.wavePath) && contentFragments.length > 0;
+    if (shouldClipContent) {
+      fragments.push(
+        `<defs data-preview-only="true"><clipPath id="${PREVIEW_CLIP_ID}" clipPathUnits="userSpaceOnUse"><path d="${borderFrame.wavePath}" /></clipPath></defs>`
+      );
+      fragments.push(`<g data-preview-clip-group="true" clip-path="url(#${PREVIEW_CLIP_ID})">`);
+      fragments.push(...contentFragments);
+      fragments.push('</g>');
+    } else {
+      fragments.push(...contentFragments);
+    }
+
     dom.svg.innerHTML = fragments.join('');
     dom.svg.setAttribute('viewBox', `0 0 ${widthPx} ${heightPx}`);
     dom.svg.setAttribute('width', widthPx);
@@ -509,6 +526,18 @@
       node.removeAttribute('opacity');
       node.removeAttribute('stroke');
       node.removeAttribute('style');
+    });
+    clone.querySelectorAll('[data-preview-clip-group]').forEach((node) => {
+      node.removeAttribute('data-preview-clip-group');
+      node.removeAttribute('clip-path');
+      const parent = node.parentNode;
+      if (!parent) {
+        return;
+      }
+      while (node.firstChild) {
+        parent.insertBefore(node.firstChild, node);
+      }
+      parent.removeChild(node);
     });
     clone.setAttribute('viewBox', `0 0 ${state.baseWidthPx} ${state.baseHeightPx}`);
     clone.setAttribute('width', state.baseWidthPx);
@@ -657,21 +686,22 @@
 
   function buildPreviewBorderFragments(options) {
     const { left, top, width, height, holeRadiusPx } = options || {};
+    const result = { fragments: [], wavePath: '', waveClip: '' };
     const fallbackRect = `<rect x="${left}" y="${top}" width="${width}" height="${height}" class="preview-rect" />`;
     if (!state.waveEnabled) {
-      return [fallbackRect];
+      result.fragments.push(fallbackRect);
+      return result;
     }
-    const fragments = [];
     const hiddenRect = `<rect x="${left}" y="${top}" width="${width}" height="${height}" class="preview-rect" data-preview-hidden-border="true" stroke="none" stroke-opacity="0" opacity="0" style="stroke: none;" />`;
-    fragments.push(hiddenRect);
+    result.fragments.push(hiddenRect);
     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-      return fragments;
+      return result;
     }
     const amplitudeBase = Math.min(Math.max(holeRadiusPx || 0, 4), width * 0.08);
     const waveAmplitudePx = clamp(amplitudeBase || 0, 6, Math.max(width * 0.12, 10));
     const cyclesEstimate = Math.round(Math.max(height, 1) / 70);
     const waveCycles = clamp(cyclesEstimate || 0, 3, 14);
-    const framePath = buildWaveFramePath({
+    const frameShape = buildWaveFrameShape({
       left,
       top,
       width,
@@ -679,19 +709,36 @@
       amplitude: waveAmplitudePx,
       waves: waveCycles
     });
-    if (framePath) {
-      fragments.push(`<path data-preview-only="true" class="preview-wave-frame" d="${framePath}" />`);
+    if (frameShape.path) {
+      result.fragments.push(`<path data-preview-only="true" class="preview-wave-frame" d="${frameShape.path}" />`);
+      result.wavePath = frameShape.path;
+      result.waveClip = frameShape.cssPath;
     }
-    return fragments;
+    return result;
   }
 
   function buildWaveFramePath(config) {
+    const { path } = buildWaveFrameShape(config);
+    return path;
+  }
+
+  function buildWaveFrameShape(config) {
+    const commands = buildWaveFrameCommands(config);
+    if (!commands.length) {
+      return { path: '', cssPath: '' };
+    }
+    const svgPath = serializeWaveCommands(commands, (value) => formatSvgNum(value));
+    const cssPath = serializeWaveCommands(commands, (value, axis) => formatCssClipValue(value, axis, config));
+    return { path: svgPath, cssPath };
+  }
+
+  function buildWaveFrameCommands(config) {
     const { left, top, width, height, amplitude, waves } = config || {};
     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-      return '';
+      return [];
     }
     if (!Number.isFinite(amplitude) || amplitude <= 0) {
-      return '';
+      return [];
     }
     const safeWaves = Math.max(1, Math.round(waves));
     const segments = safeWaves * 2;
@@ -715,43 +762,81 @@
       direction: 1,
       orientation: 'up'
     });
-    if (!rightWave.path || !leftWave.path) {
-      return '';
+    if (!rightWave.length || !leftWave.length) {
+      return [];
     }
-    const parts = [
-      `M ${formatSvgNum(left)} ${formatSvgNum(top)}`,
-      `L ${formatSvgNum(right)} ${formatSvgNum(top)}`,
-      rightWave.path,
-      `L ${formatSvgNum(left)} ${formatSvgNum(bottom)}`,
-      leftWave.path,
-      'Z'
+    return [
+      { cmd: 'M', points: [{ x: left, y: top }] },
+      { cmd: 'L', points: [{ x: right, y: top }] },
+      ...rightWave,
+      { cmd: 'L', points: [{ x: left, y: bottom }] },
+      ...leftWave,
+      { cmd: 'Z', points: [] }
     ];
-    return parts.join(' ');
   }
 
   function buildWaveSegmentSequence(options) {
     const { startX, startY, height, amplitude, segments, direction = 1, orientation = 'down' } = options || {};
     if (!Number.isFinite(height) || height <= 0) {
-      return { path: '', endY: startY };
+      return [];
     }
     if (!Number.isFinite(amplitude) || amplitude <= 0) {
-      return { path: '', endY: startY };
+      return [];
     }
     if (!Number.isFinite(segments) || segments <= 0) {
-      return { path: '', endY: startY };
+      return [];
     }
     const sign = orientation === 'up' ? -1 : 1;
     const segmentHeight = (height / segments) * sign;
     let currentY = startY;
-    const parts = [];
+    const commands = [];
     for (let i = 0; i < segments; i += 1) {
       const swing = amplitude * (i % 2 === 0 ? 1 : -1) * direction;
       const ctrlX = startX + swing;
       const ctrlY = currentY + segmentHeight / 2;
       currentY += segmentHeight;
-      parts.push(`Q ${formatSvgNum(ctrlX)} ${formatSvgNum(ctrlY)} ${formatSvgNum(startX)} ${formatSvgNum(currentY)}`);
+      commands.push({
+        cmd: 'Q',
+        points: [
+          { x: ctrlX, y: ctrlY },
+          { x: startX, y: currentY }
+        ]
+      });
     }
-    return { path: parts.join(' '), endY: currentY };
+    return commands;
+  }
+
+  function serializeWaveCommands(commands, formatter) {
+    if (!Array.isArray(commands) || commands.length === 0) {
+      return '';
+    }
+    const parts = [];
+    commands.forEach(({ cmd, points }) => {
+      if (cmd === 'Z') {
+        parts.push('Z');
+        return;
+      }
+      if (!Array.isArray(points) || points.length === 0) {
+        return;
+      }
+      const coords = [];
+      points.forEach((point) => {
+        coords.push(formatter(point.x, 'x'));
+        coords.push(formatter(point.y, 'y'));
+      });
+      parts.push(`${cmd} ${coords.join(' ')}`);
+    });
+    return parts.join(' ');
+  }
+
+  function formatCssClipValue(value, axis, bounds) {
+    const { left = 0, top = 0, width, height } = bounds || {};
+    const denominator = axis === 'x' ? width : height;
+    const offset = axis === 'x' ? left : top;
+    const safeDenominator = Number.isFinite(denominator) && denominator !== 0 ? denominator : 1;
+    const raw = Number.isFinite(value) ? (value - offset) / safeDenominator : 0;
+    const clamped = clamp(raw, -0.1, 1.1);
+    return `${(clamped * 100).toFixed(4)}%`;
   }
 
   function formatSvgNum(value) {
@@ -759,6 +844,15 @@
       return '0';
     }
     return Number(value).toFixed(2);
+  }
+
+  function applyWrapperClipPath(pathData) {
+    if (!dom.svgWrapper) {
+      return;
+    }
+    const clipValue = pathData ? `path('${pathData}')` : '';
+    dom.svgWrapper.style.clipPath = clipValue;
+    dom.svgWrapper.style.webkitClipPath = clipValue;
   }
 
   function enforceAutoGrid(params, options = {}) {
