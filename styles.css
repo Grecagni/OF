@@ -444,15 +444,153 @@ svg {
 @media (max-width: 960px) {
   .app {
     flex-direction: column;
+    gap: 16px;
+    padding: 16px;
   }
 
   .controls {
     flex: none;
     border-right: none;
     border-bottom: 1px solid #d5dae1;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 20px 55px rgba(15, 23, 42, 0.08);
   }
 
   .preview-panel {
     min-height: 60vh;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 20px 55px rgba(15, 23, 42, 0.08);
+    background: #f7f9fc;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    font-size: 14.5px;
+  }
+
+  body {
+    background: #edf1f6;
+  }
+
+  .app {
+    padding: 8px;
+    gap: 8px;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .controls {
+    padding: 10px;
+    border: 1px solid #d5dae1;
+    box-shadow: 0 10px 35px rgba(15, 23, 42, 0.08);
+    max-height: 52vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .controls h1 {
+    font-size: 1.15rem;
+    text-align: center;
+    margin-bottom: 18px;
+  }
+
+  .control-row {
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid #eff2f7;
+  }
+
+  .control-row label {
+    font-size: 0.9rem;
+  }
+
+  .control-help {
+    font-size: 0.78rem;
+  }
+
+  input[type="number"],
+  select {
+    font-size: 0.9rem;
+    padding: 5px 8px;
+  }
+
+  .slider-group {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .toggle-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toggle-row .left,
+  .toggle-row .right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .buttons button {
+    width: 100%;
+    padding: 8px 10px;
+  }
+
+  .wave-toggle-row {
+    margin-top: 8px;
+    margin-bottom: 16px;
+  }
+
+  .wave-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .status-message {
+    text-align: center;
+  }
+
+  .info-box {
+    padding: 12px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .badge-row {
+    justify-content: center;
+  }
+
+  .preview-panel {
+    padding: 4px;
+    box-shadow: none;
+    background: transparent;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: 0;
+    flex: 1 1 40vh;
+  }
+
+  .preview-meta {
+    width: 100%;
+    margin: 0 0 6px;
+    font-size: 0.9rem;
+  }
+
+  .svg-wrapper {
+    width: 100%;
+    flex: 1 1 auto;
+    max-height: 40vh;
+    aspect-ratio: 1 / 1;
+    border-width: 1px;
   }
 }
