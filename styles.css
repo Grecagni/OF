@@ -411,6 +411,11 @@ svg {
   opacity: 0.85;
 }
 
+.preview-wave-fill.stripes {
+  mix-blend-mode: soft-light;
+  opacity: 0.55;
+}
+
 .badge-row {
   display: flex;
   gap: 8px;

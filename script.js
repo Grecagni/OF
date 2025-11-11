@@ -28,6 +28,7 @@
   const PREVIEW_CLIP_ID = 'previewWaveClip';
   const PREVIEW_WAVE_FILL_GRADIENT_ID = 'previewWaveFillGradient';
   const PREVIEW_WAVE_GLOSS_GRADIENT_ID = 'previewWaveGlossGradient';
+  const PREVIEW_WAVE_STRIPE_PATTERN_ID = 'previewWaveStripePattern';
 
   const state = {
     params: { ...defaults },
@@ -691,6 +692,11 @@
     if (!state.waveEnabled || !frameData || !frameData.wavePath) {
       return [];
     }
+    const bounds = frameData.bounds || {};
+    const patternWidth = Math.max(bounds.width || 0, 1);
+    const stripeLight = 48;
+    const stripeDark = 48;
+    const stripePeriod = stripeLight + stripeDark;
     const defs = `
       <defs data-preview-only="true">
         <linearGradient id="${PREVIEW_WAVE_FILL_GRADIENT_ID}" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -704,18 +710,23 @@
           <stop offset="70%" stop-color="#0f2654" stop-opacity="0.08" />
           <stop offset="100%" stop-color="#0f2654" stop-opacity="0.18" />
         </linearGradient>
+        <pattern id="${PREVIEW_WAVE_STRIPE_PATTERN_ID}" x="${bounds.left || 0}" y="${bounds.top || 0}" width="${patternWidth}" height="${stripePeriod}" patternUnits="userSpaceOnUse">
+          <rect x="0" y="0" width="${patternWidth}" height="${stripeLight}" fill="rgba(255, 255, 255, 0.55)" />
+          <rect x="0" y="${stripeLight}" width="${patternWidth}" height="${stripeDark}" fill="rgba(15, 38, 84, 0.22)" />
+        </pattern>
       </defs>
     `.trim();
     return [
       defs,
       `<path data-preview-only="true" class="preview-wave-fill" d="${frameData.wavePath}" fill="url(#${PREVIEW_WAVE_FILL_GRADIENT_ID})" />`,
+      `<path data-preview-only="true" class="preview-wave-fill stripes" d="${frameData.wavePath}" fill="url(#${PREVIEW_WAVE_STRIPE_PATTERN_ID})" />`,
       `<path data-preview-only="true" class="preview-wave-fill overlay" d="${frameData.wavePath}" fill="url(#${PREVIEW_WAVE_GLOSS_GRADIENT_ID})" />`
     ];
   }
 
   function buildPreviewBorderFragments(options) {
     const { left, top, width, height, holeRadiusPx } = options || {};
-    const result = { fragments: [], wavePath: '' };
+    const result = { fragments: [], wavePath: '', bounds: { left, top, width, height } };
     const fallbackRect = `<rect x="${left}" y="${top}" width="${width}" height="${height}" class="preview-rect" />`;
     if (!state.waveEnabled) {
       result.fragments.push(fallbackRect);
@@ -771,20 +782,28 @@
     const segments = safeWaves * 2;
     const right = left + width;
     const bottom = top + height;
+    const maxInset = Math.max(width / 2 - 1, 1);
+    const axisInset = Math.min(Math.max(amplitude, 0), maxInset);
+    if (axisInset <= 0) {
+      return [];
+    }
+    const effectiveAmplitude = axisInset;
+    const rightAxis = right - axisInset;
+    const leftAxis = left + axisInset;
     const rightWave = buildWaveSegmentSequence({
-      startX: right,
+      startX: rightAxis,
       startY: top,
       height,
-      amplitude,
+      amplitude: effectiveAmplitude,
       segments,
       direction: -1,
       orientation: 'down'
     });
     const leftWave = buildWaveSegmentSequence({
-      startX: left,
+      startX: leftAxis,
       startY: bottom,
       height,
-      amplitude,
+      amplitude: effectiveAmplitude,
       segments,
       direction: 1,
       orientation: 'up'
@@ -792,14 +811,27 @@
     if (!rightWave.length || !leftWave.length) {
       return [];
     }
-    return [
+    const commands = [
       { cmd: 'M', points: [{ x: left, y: top }] },
-      { cmd: 'L', points: [{ x: right, y: top }] },
-      ...rightWave,
-      { cmd: 'L', points: [{ x: left, y: bottom }] },
-      ...leftWave,
-      { cmd: 'Z', points: [] }
+      { cmd: 'L', points: [{ x: right, y: top }] }
     ];
+    if (rightAxis !== right) {
+      commands.push({ cmd: 'L', points: [{ x: rightAxis, y: top }] });
+    }
+    commands.push(...rightWave);
+    if (rightAxis !== right) {
+      commands.push({ cmd: 'L', points: [{ x: right, y: bottom }] });
+    }
+    commands.push({ cmd: 'L', points: [{ x: left, y: bottom }] });
+    if (leftAxis !== left) {
+      commands.push({ cmd: 'L', points: [{ x: leftAxis, y: bottom }] });
+    }
+    commands.push(...leftWave);
+    if (leftAxis !== left) {
+      commands.push({ cmd: 'L', points: [{ x: left, y: top }] });
+    }
+    commands.push({ cmd: 'Z', points: [] });
+    return commands;
   }
 
   function buildWaveSegmentSequence(options) {
