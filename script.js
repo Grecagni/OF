@@ -508,6 +508,7 @@
       node.removeAttribute('stroke-opacity');
       node.removeAttribute('opacity');
       node.removeAttribute('stroke');
+      node.removeAttribute('style');
     });
     clone.setAttribute('viewBox', `0 0 ${state.baseWidthPx} ${state.baseHeightPx}`);
     clone.setAttribute('width', state.baseWidthPx);
@@ -661,7 +662,7 @@
       return [fallbackRect];
     }
     const fragments = [];
-    const hiddenRect = `<rect x="${left}" y="${top}" width="${width}" height="${height}" class="preview-rect" data-preview-hidden-border="true" stroke="none" stroke-opacity="0" opacity="0" />`;
+    const hiddenRect = `<rect x="${left}" y="${top}" width="${width}" height="${height}" class="preview-rect" data-preview-hidden-border="true" stroke="none" stroke-opacity="0" opacity="0" style="stroke: none;" />`;
     fragments.push(hiddenRect);
     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
       return fragments;

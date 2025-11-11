@@ -304,6 +304,7 @@ button:disabled {
 
 .svg-wrapper.wave-on {
   background: radial-gradient(circle at 30% 20%, #e6effc 0%, #cfdff6 55%, #b8c7e0 100%);
+  border-color: transparent;
 }
 
 .svg-wrapper.wave-on::before,
