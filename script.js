@@ -89,7 +89,9 @@
     dom.exportPngBtn = document.getElementById('exportPngBtn');
     dom.copyHashBtn = document.getElementById('copyHashBtn');
     dom.waveToggleBtn = document.getElementById('waveToggleBtn');
-    dom.previewSizeLabel = document.getElementById('previewSizeLabel');
+    dom.previewFrame = document.getElementById('previewFrame');
+    dom.previewWidthLabel = document.getElementById('previewWidthLabel');
+    dom.previewHeightLabel = document.getElementById('previewHeightLabel');
     dom.info = {
       holeArea: document.getElementById('holeArea'),
       cellArea: document.getElementById('cellArea'),
@@ -170,7 +172,7 @@
     if (dom.waveToggleBtn) {
       dom.waveToggleBtn.setAttribute('aria-pressed', String(state.waveEnabled));
       dom.waveToggleBtn.classList.toggle('is-active', state.waveEnabled);
-      dom.waveToggleBtn.setAttribute('title', state.waveEnabled ? 'Effetto wave attivo' : 'Effetto wave disattivato');
+      dom.waveToggleBtn.setAttribute('aria-label', state.waveEnabled ? 'Wave attivo' : 'Wave spento');
       const label = dom.waveToggleBtn.querySelector('.wave-toggle__label');
       if (label) {
         label.textContent = state.waveEnabled ? 'Wave attivo' : 'Wave spento';
@@ -344,8 +346,11 @@
     const widthMm = Math.max(0, safeCols * params.x + params.d);
     const rowStepMm = getEffectiveRowStepMm(params);
     const heightMm = Math.max(0, safeRows * rowStepMm + params.d);
-    if (dom.previewSizeLabel) {
-      dom.previewSizeLabel.textContent = `Copertura stimata: ${widthMm.toFixed(1)} × ${heightMm.toFixed(1)} mm`;
+    if (dom.previewWidthLabel) {
+      dom.previewWidthLabel.textContent = `${widthMm.toFixed(1)} mm`;
+    }
+    if (dom.previewHeightLabel) {
+      dom.previewHeightLabel.textContent = `${heightMm.toFixed(1)} mm`;
     }
     const collision = params.d >= Math.min(params.x, rowStepMm);
     dom.info.warning.classList.toggle('visible', collision);
@@ -385,6 +390,14 @@
     const contentBottomPx = contentTopPx + boundedHeightPx;
     const startCx = contentLeftPx + holeRadiusPx;
     const startCy = contentTopPx + holeRadiusPx;
+    updatePreviewFrameOffsets({
+      widthPx,
+      heightPx,
+      contentLeftPx,
+      contentTopPx,
+      contentWidthPx: boundedWidthPx,
+      contentHeightPx: boundedHeightPx
+    });
 
     const fragments = [];
     fragments.push(`<style>${SVG_EMBEDDED_STYLES}</style>`);
@@ -448,6 +461,22 @@
     if (dom.info && dom.info.cellsCount) {
       dom.info.cellsCount.textContent = `${holesDrawn} fori`;
     }
+  }
+
+  function updatePreviewFrameOffsets({ widthPx, heightPx, contentLeftPx, contentTopPx, contentWidthPx, contentHeightPx }) {
+    if (!dom.previewFrame) {
+      return;
+    }
+    const safeWidth = Number.isFinite(widthPx) && widthPx > 0 ? widthPx : 1;
+    const safeHeight = Number.isFinite(heightPx) && heightPx > 0 ? heightPx : 1;
+    const leftPct = clamp((contentLeftPx / safeWidth) * 100, 0, 100);
+    const topPct = clamp((contentTopPx / safeHeight) * 100, 0, 100);
+    const widthPct = clamp((contentWidthPx / safeWidth) * 100, 0, 100);
+    const heightPct = clamp((contentHeightPx / safeHeight) * 100, 0, 100);
+    dom.previewFrame.style.setProperty('--content-left', `${leftPct.toFixed(4)}%`);
+    dom.previewFrame.style.setProperty('--content-top', `${topPct.toFixed(4)}%`);
+    dom.previewFrame.style.setProperty('--content-width', `${widthPct.toFixed(4)}%`);
+    dom.previewFrame.style.setProperty('--content-height', `${heightPct.toFixed(4)}%`);
   }
 
   function requestRender() {

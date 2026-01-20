@@ -22,8 +22,9 @@ body {
 .controls {
   flex: 0 0 360px;
   padding: 24px;
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f8fb 100%);
   border-right: 1px solid #d5dae1;
+  box-shadow: inset -1px 0 0 rgba(15, 23, 42, 0.04);
   overflow-y: auto;
 }
 
@@ -34,14 +35,14 @@ body {
 }
 
 .control-row {
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e5e9ef;
+  margin-bottom: 16px;
+  padding: 12px 12px 14px;
+  border: 1px solid #e5e9ef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
 }
 
-.control-row:last-of-type {
-  border-bottom: none;
-}
 
 .control-row label {
   display: flex;
@@ -74,6 +75,7 @@ body {
 
 input[type="range"] {
   width: 100%;
+  accent-color: #2563eb;
 }
 
 input[type="number"] {
@@ -130,6 +132,11 @@ input[readonly] {
   gap: 12px;
   margin-bottom: 16px;
   flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid #e5e9ef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
 }
 
 .toggle-row .left,
@@ -156,6 +163,10 @@ button {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 16px;
+}
+
+.buttons.buttons--compact {
+  margin-bottom: 8px;
 }
 
 button.primary {
@@ -185,33 +196,91 @@ button.ghost.is-active {
   color: #fff;
 }
 
-.wave-toggle-row {
-  margin-bottom: 20px;
+.preview-toolbar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(6px);
+  z-index: 6;
 }
 
-.wave-toggle {
+button.tool-btn {
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  color: #1f2a37;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.9rem;
-  padding: 9px 14px;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  position: relative;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.wave-toggle__icon {
-  display: inline-flex;
-  width: 20px;
-  height: 20px;
-  color: inherit;
+button.tool-btn:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.16);
 }
 
-.wave-toggle__icon svg {
-  width: 100%;
-  height: 100%;
+button.tool-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+button.tool-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+}
+
+button.tool-btn.is-active {
+  background: #1f2a37;
+  border-color: #1f2a37;
+  color: #fff;
+}
+
+.tool-icon {
+  width: 18px;
+  height: 18px;
   display: block;
 }
 
+.tool-label,
 .wave-toggle__label {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%) translateX(4px);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #1f2a37;
+  color: #fff;
+  font-size: 0.75rem;
   font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.2);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+button.tool-btn:hover .tool-label,
+button.tool-btn:focus-visible .tool-label,
+button.tool-btn:hover .wave-toggle__label,
+button.tool-btn:focus-visible .wave-toggle__label {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
 }
 
 button:disabled {
@@ -286,12 +355,31 @@ button:disabled {
   min-height: 100vh;
 }
 
-.svg-wrapper {
-  flex: 0 0 auto;
+.preview-frame {
+  position: relative;
   width: clamp(260px, min(100%, calc(100vh - 56px)), 1100px);
   max-height: calc(100vh - 56px);
   margin: 0 auto;
   aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  --dimension-offset: 22px;
+  --dimension-tick-size: 10px;
+  --dimension-color: #4b5563;
+  --dimension-label-bg: rgba(244, 246, 248, 0.9);
+  --content-left: 0%;
+  --content-top: 0%;
+  --content-width: 100%;
+  --content-height: 100%;
+}
+
+.svg-wrapper {
+  flex: 0 0 auto;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
   background: #cddef7;
   border: 2px solid #696b6e;
   border-radius: 8px;
@@ -416,6 +504,107 @@ svg {
   opacity: 0.55;
 }
 
+.dimension-line {
+  position: absolute;
+  pointer-events: none;
+  color: var(--dimension-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  z-index: 3;
+}
+
+.dimension-line__label {
+  position: relative;
+  z-index: 1;
+  background: var(--dimension-label-bg);
+  border: 1px solid #c5ccd8;
+  border-radius: 999px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.dimension-line__tick {
+  position: absolute;
+  background: var(--dimension-color);
+}
+
+.dimension-line--horizontal {
+  left: var(--content-left);
+  width: var(--content-width);
+  top: calc(var(--content-top) - var(--dimension-offset));
+  height: var(--dimension-offset);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dimension-line--horizontal::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--dimension-color);
+}
+
+.dimension-line--horizontal .dimension-line__tick {
+  width: 1px;
+  height: var(--dimension-tick-size);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.dimension-line--horizontal .dimension-line__tick--start {
+  left: 0;
+}
+
+.dimension-line--horizontal .dimension-line__tick--end {
+  right: 0;
+}
+
+.dimension-line--vertical {
+  top: var(--content-top);
+  height: var(--content-height);
+  left: calc(var(--content-left) - var(--dimension-offset));
+  width: var(--dimension-offset);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dimension-line--vertical::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--dimension-color);
+}
+
+.dimension-line--vertical .dimension-line__tick {
+  height: 1px;
+  width: var(--dimension-tick-size);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.dimension-line--vertical .dimension-line__tick--start {
+  top: 0;
+}
+
+.dimension-line--vertical .dimension-line__tick--end {
+  bottom: 0;
+}
+
+.dimension-line--vertical .dimension-line__label {
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
 .badge-row {
   display: flex;
   gap: 8px;
@@ -430,15 +619,6 @@ svg {
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
-}
-
-.preview-meta {
-  width: clamp(260px, min(100%, calc(100vh - 56px)), 1100px);
-  margin: 0 auto 12px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #1f2a37;
-  text-align: center;
 }
 
 @media (max-width: 960px) {
@@ -498,9 +678,10 @@ svg {
   }
 
   .control-row {
-    padding-bottom: 12px;
-    margin-bottom: 14px;
-    border-bottom: 1px solid #eff2f7;
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    border: 1px solid #edf1f7;
   }
 
   .control-row label {
@@ -525,6 +706,9 @@ svg {
   .toggle-row {
     flex-direction: column;
     align-items: stretch;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid #edf1f7;
   }
 
   .toggle-row .left,
@@ -539,19 +723,36 @@ svg {
     gap: 8px;
   }
 
+  .buttons.buttons--compact {
+    grid-template-columns: 1fr;
+  }
+
   .buttons button {
     width: 100%;
     padding: 8px 10px;
   }
 
-  .wave-toggle-row {
-    margin-top: 8px;
-    margin-bottom: 16px;
+  .preview-toolbar {
+    flex-direction: row;
+    right: 50%;
+    transform: translateX(50%);
+    top: auto;
+    bottom: 12px;
   }
 
-  .wave-toggle {
-    width: 100%;
-    justify-content: center;
+  .tool-label,
+  .wave-toggle__label {
+    left: 50%;
+    right: auto;
+    top: calc(100% + 8px);
+    transform: translateX(-50%) translateY(-4px);
+  }
+
+  button.tool-btn:hover .tool-label,
+  button.tool-btn:focus-visible .tool-label,
+  button.tool-btn:hover .wave-toggle__label,
+  button.tool-btn:focus-visible .wave-toggle__label {
+    transform: translateX(-50%) translateY(0);
   }
 
   .status-message {
@@ -571,7 +772,7 @@ svg {
   }
 
   .preview-panel {
-    padding: 4px;
+    padding: 12px;
     box-shadow: none;
     background: transparent;
     align-items: stretch;
@@ -580,17 +781,15 @@ svg {
     flex: 1 1 40vh;
   }
 
-  .preview-meta {
+  .preview-frame {
     width: 100%;
-    margin: 0 0 6px;
-    font-size: 0.9rem;
+    max-height: 40vh;
+    aspect-ratio: 1 / 1;
+    --dimension-offset: 16px;
+    --dimension-tick-size: 8px;
   }
 
   .svg-wrapper {
-    width: 100%;
-    flex: 1 1 auto;
-    max-height: 40vh;
-    aspect-ratio: 1 / 1;
     border-width: 1px;
   }
 }

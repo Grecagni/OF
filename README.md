@@ -30,7 +30,7 @@ Applicazione single-page per progettare pattern di microforatura e stimare il **
 ## Anteprima e indicatori
 - Preview vettoriale 50×50 mm con clipping dinamico e bordo wave (disattivabile dal pulsante “Wave attivo”).
 - Griglia opzionale per verificare gli allineamenti; il layout è responsive e occupa tutto lo schermo disponibile.
-- Box informativo con aree, rapporti e numero di fori, più etichetta “Copertura stimata: … mm”.
+- Box informativo con aree, rapporti e numero di fori, più linee di quota con dimensioni in mm intorno alla preview.
 - Warning accessibile (ARIA alert) quando i fori collidono o toccano il bordo, con evidenziazione del controllo diametro.
 
 ## Esportazione e condivisione
