@@ -198,8 +198,10 @@ button.ghost.is-active {
 
 .preview-toolbar {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 50%;
+  right: auto;
+  left: calc(100% + 14px);
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -347,7 +349,7 @@ button:disabled {
 
 .preview-panel {
   flex: 1;
-  padding: 24px;
+  padding: 24px 96px 24px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -531,9 +533,10 @@ svg {
 }
 
 .dimension-line--horizontal {
-  left: var(--content-left);
   width: var(--content-width);
-  top: calc(var(--content-top) - var(--dimension-offset));
+  left: 50%;
+  top: calc(-1 * var(--dimension-offset));
+  transform: translateX(-50%);
   height: var(--dimension-offset);
   display: flex;
   align-items: center;
@@ -566,9 +569,10 @@ svg {
 }
 
 .dimension-line--vertical {
-  top: var(--content-top);
   height: var(--content-height);
-  left: calc(var(--content-left) - var(--dimension-offset));
+  top: 50%;
+  left: calc(-1 * var(--dimension-offset));
+  transform: translateY(-50%);
   width: var(--dimension-offset);
   display: flex;
   align-items: center;
@@ -643,6 +647,28 @@ svg {
     padding: 20px;
     box-shadow: 0 20px 55px rgba(15, 23, 42, 0.08);
     background: #f7f9fc;
+  }
+
+  .preview-toolbar {
+    left: 50%;
+    top: calc(100% + 12px);
+    transform: translateX(-50%);
+    flex-direction: row;
+  }
+
+  .tool-label,
+  .wave-toggle__label {
+    left: 50%;
+    right: auto;
+    top: calc(100% + 8px);
+    transform: translateX(-50%) translateY(-4px);
+  }
+
+  button.tool-btn:hover .tool-label,
+  button.tool-btn:focus-visible .tool-label,
+  button.tool-btn:hover .wave-toggle__label,
+  button.tool-btn:focus-visible .wave-toggle__label {
+    transform: translateX(-50%) translateY(0);
   }
 }
 
@@ -734,8 +760,9 @@ svg {
 
   .preview-toolbar {
     flex-direction: row;
-    right: 50%;
-    transform: translateX(50%);
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
     top: auto;
     bottom: 12px;
   }
