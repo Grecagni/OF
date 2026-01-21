@@ -56,23 +56,16 @@
       </div>
 
       <div class="toggle-row">
-        <div class="left">
-          <label>
-            <input type="checkbox" id="gridToggle" /> Mostra griglia
-          </label>
-        </div>
-        <div class="right">
-          <label for="patternSelect">Pattern
-            <select id="patternSelect">
-              <option value="staggered">Sfalsato</option>
-              <option value="grid">Griglia</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
-      <div class="buttons buttons--compact">
-        <button type="button" class="secondary" id="resetBtn">Reset</button>
+        <label class="toggle-row__grid">
+          <input type="checkbox" id="gridToggle" /> Mostra griglia
+        </label>
+        <button type="button" class="secondary reset-btn" id="resetBtn">Reset</button>
+        <label for="patternSelect" class="toggle-row__pattern">Pattern
+          <select id="patternSelect">
+            <option value="staggered">Sfalsato</option>
+            <option value="grid">Griglia</option>
+          </select>
+        </label>
       </div>
 
       <div class="status-message" id="statusMessage" role="status" aria-live="polite" aria-atomic="true"></div>

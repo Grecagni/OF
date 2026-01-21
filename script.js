@@ -24,6 +24,14 @@
     .preview-rect { fill: none; stroke: #9aa4b5; stroke-width: 1; }
     .hole { fill: #ffffff; stroke: #4b5563; stroke-width: 1; }
     .grid-line { stroke: #c5ccd8; stroke-width: 0.8; stroke-dasharray: 4 4; }
+    .preview-watermark {
+      fill: #5f6f86;
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      opacity: 0.4;
+    }
   `.trim();
   const PREVIEW_CLIP_ID = 'previewWaveClip';
   const PREVIEW_WAVE_FILL_GRADIENT_ID = 'previewWaveFillGradient';
@@ -234,32 +242,28 @@
       return;
     }
     if (params.mode === CALC_MODES.STEP) {
-      if (sourceKey === 'mode' || sourceKey === 'd' || sourceKey === 'ofTarget' || sourceKey === null) {
+      if (sourceKey === 'mode' || sourceKey === 'd' || sourceKey === 'ofTarget' || sourceKey === 'pattern' || sourceKey === null) {
         state.stepAuto = true;
       }
       if (sourceKey === 'x' || sourceKey === 'y') {
         state.stepAuto = false;
-        const manualValue = clampToSliderRange(sourceKey, params[sourceKey]);
-        syncStepValue(params, manualValue, sourceKey);
+        const pair = computeStepPairFromTarget(params, sourceKey);
+        if (pair) {
+          params.x = pair.x;
+          params.y = pair.y;
+        }
         applySliderValue('x', params.x);
         applySliderValue('y', params.y);
         return;
       }
       if (state.stepAuto) {
-        const ofDecimal = params.ofTarget > 0 ? params.ofTarget / 100 : 0;
-        const holeArea = Math.PI * Math.pow(params.d / 2, 2);
-        const patternFactor = getPatternAreaFactor(params.pattern);
-        if (ofDecimal > 0 && holeArea > 0 && patternFactor > 0) {
-          const desiredStep = Math.sqrt(holeArea / (ofDecimal * patternFactor));
-          const clampedStep = clampToSliderRange('x', desiredStep);
-          syncStepValue(params, clampedStep);
+        const pair = computeStepPairFromTarget(params);
+        if (pair) {
+          params.x = pair.x;
+          params.y = pair.y;
           applySliderValue('x', params.x);
           applySliderValue('y', params.y);
         }
-      } else {
-        syncStepValue(params, params.x);
-        applySliderValue('x', params.x);
-        applySliderValue('y', params.y);
       }
       return;
     }
@@ -278,13 +282,36 @@
     state.stepAuto = true;
   }
 
-  function syncStepValue(params, value, preferredKey = 'x') {
-    const baseKey = preferredKey === 'y' ? 'y' : 'x';
-    const fallback = Number.isFinite(defaults[baseKey]) ? defaults[baseKey] : defaults.x;
-    const safe = clampToSliderRange(baseKey, Number.isFinite(value) ? value : fallback);
-    params[baseKey] = safe;
-    const mirrorKey = baseKey === 'x' ? 'y' : 'x';
-    params[mirrorKey] = clampToSliderRange(mirrorKey, safe);
+  function computeStepPairFromTarget(params, lockedKey = null) {
+    const ofDecimal = params.ofTarget > 0 ? params.ofTarget / 100 : 0;
+    const holeArea = Math.PI * Math.pow(params.d / 2, 2);
+    const patternFactor = getPatternAreaFactor(params.pattern);
+    if (ofDecimal <= 0 || holeArea <= 0 || patternFactor <= 0) {
+      return null;
+    }
+    const cellArea = holeArea / (ofDecimal * patternFactor);
+    if (!Number.isFinite(cellArea) || cellArea <= 0) {
+      return null;
+    }
+    if (lockedKey === 'x') {
+      const lockedX = clampToSliderRange('x', params.x);
+      if (!Number.isFinite(lockedX) || lockedX <= 0) {
+        return null;
+      }
+      const computedY = clampToSliderRange('y', cellArea / lockedX);
+      return { x: lockedX, y: computedY };
+    }
+    if (lockedKey === 'y') {
+      const lockedY = clampToSliderRange('y', params.y);
+      if (!Number.isFinite(lockedY) || lockedY <= 0) {
+        return null;
+      }
+      const computedX = clampToSliderRange('x', cellArea / lockedY);
+      return { x: computedX, y: lockedY };
+    }
+    const step = Math.sqrt(cellArea);
+    const clampedStep = clampToSliderRange('x', step);
+    return { x: clampedStep, y: clampToSliderRange('y', clampedStep) };
   }
 
   function syncOfTargetWithComputed(params) {
@@ -322,8 +349,8 @@
     let text = 'Calcola OF in funzione di diametro e passi.';
     if (params.mode === CALC_MODES.STEP) {
       text = state.stepAuto
-        ? 'Calcola passo con x = y partendo da diametro e OF. Modifica x o y per intervenire manualmente.'
-        : 'Passo modificato manualmente; cambia d o OF per ricalcolare automaticamente.';
+        ? 'Calcola passo con x = y partendo da diametro e OF. Modifica x o y per fissare un passo.'
+        : 'Passo manuale: l\'altro passo si aggiorna per mantenere OF e d; cambia d o OF per ricalcolare automaticamente.';
     } else if (params.mode === CALC_MODES.DIAMETER) {
       text = 'Calcola il diametro dei fori a partire da OF, passo x e passo y.';
     }
@@ -413,6 +440,15 @@
     borderFrame.fragments.forEach((fragment) => fragments.push(fragment));
 
     const contentFragments = [];
+    const watermarkFragment = buildWatermarkFragment({
+      contentLeftPx,
+      contentTopPx,
+      contentWidthPx: boundedWidthPx,
+      contentHeightPx: boundedHeightPx
+    });
+    if (watermarkFragment) {
+      contentFragments.push(watermarkFragment);
+    }
 
     if (params.showGrid) {
       for (let c = 0; c <= params.cols; c += 1) {
@@ -461,6 +497,19 @@
     if (dom.info && dom.info.cellsCount) {
       dom.info.cellsCount.textContent = `${holesDrawn} fori`;
     }
+  }
+
+  function buildWatermarkFragment({ contentLeftPx, contentTopPx, contentWidthPx, contentHeightPx }) {
+    if (!Number.isFinite(contentWidthPx) || !Number.isFinite(contentHeightPx)) {
+      return '';
+    }
+    if (contentWidthPx <= 0 || contentHeightPx <= 0) {
+      return '';
+    }
+    const inset = clamp(Math.min(contentWidthPx, contentHeightPx) * 0.06, 8, 16);
+    const x = contentLeftPx + contentWidthPx - inset;
+    const y = contentTopPx + contentHeightPx - inset;
+    return `<text x="${formatSvgNum(x)}" y="${formatSvgNum(y)}" class="preview-watermark" text-anchor="end">GR</text>`;
   }
 
   function updatePreviewFrameOffsets({ widthPx, heightPx, contentLeftPx, contentTopPx, contentWidthPx, contentHeightPx }) {
